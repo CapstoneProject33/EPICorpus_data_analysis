@@ -1,4 +1,6 @@
-/venv
+# Ignore the virtual environment folder
+venv/
 
-
-
+# Other ignores (optional)
+__pycache__/
+*.pyc
