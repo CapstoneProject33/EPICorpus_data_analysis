@@ -4,3 +4,10 @@ venv/
 # Other ignores (optional)
 __pycache__/
 *.pyc
+
+
+
+trash/
+
+# Ignore CSVs
+csvs/*.csv
