@@ -18,7 +18,7 @@ else:
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Load the CSV file
-data_df = pd.read_csv('./cartographic_analysis/output_agreement_levels.csv')
+data_df = pd.read_csv('./cartographic_analysis/output_agreement_levels2.csv')
 
 # Check unique labels in the DataFrame
 print("Unique labels in the dataset:", data_df['label'].unique())
@@ -30,20 +30,32 @@ data_df['label'] = data_df['label'].astype(int)
 label_counts = data_df['label'].value_counts()
 print("Counts of each label:", label_counts)
 
-# Adjust balancing logic
 min_count = min(label_counts)
 
-# If min_count is less than 1962, use min_count instead
-data_df_temp_0 = data_df[data_df['label'] == 0].sample(min_count, random_state=42, replace=True)
-data_df_temp_1 = data_df[data_df['label'] == 1].sample(min_count, random_state=42, replace=True)
+count_0 = data_df[data_df['label'] == 0].shape[0]
+count_1 = data_df[data_df['label'] == 1].shape[0]
+
+min_count_0 = min(min_count, count_0)
+min_count_1 = min(min_count, count_1)
+
+# Adjust balancing logic
+
+data_df_temp_0 = data_df[data_df['label'] == 0].sample(min_count_0, random_state=42, replace=True)
+data_df_temp_1 = data_df[data_df['label'] == 1].sample(min_count_1, random_state=42, replace=True)
 
 # After sampling and concatenating
 train_df_balanced = pd.concat([data_df_temp_0, data_df_temp_1], axis=0).reset_index(drop=True)
 
 # Split the data into training, validation, and test sets
-train_df = train_df_balanced.sample(frac=0.8, random_state=42)
+train_df = train_df_balanced.sample(frac=1.0, random_state=42)
 val_df = train_df_balanced.drop(train_df.index).reset_index(drop=True)
 test_df = data_df.drop(train_df_balanced.index).reset_index(drop=True)
+
+train_df['text_id'] = train_df['text_id'].astype(np.int64)
+train_df['label'] = train_df['label'].astype(np.int64)
+val_df['text_id'] = val_df['text_id'].astype(np.int64)
+val_df['label'] = val_df['label'].astype(np.int64)
+
 
 # Model and Dataset setup
 BERT = 'bert-base-uncased'
@@ -66,6 +78,10 @@ class TextDataset(Dataset):
         self.df = df.reset_index(drop=True)  # Ensure indices are reset
         self.tokenizer = tokenizer
         self.max_len = max_len
+
+        self.df['text_id'] = self.df['text_id'].astype('int64')  # Convert text_id to int64
+        self.df['label'] = self.df['label'].astype('int64')  # Ensure label is int64
+
 
     def __getitem__(self, index):
         if index >= self.len:
@@ -94,6 +110,7 @@ class TextDataset(Dataset):
             'targets': torch.tensor(target, dtype=torch.long),
             'text_ids': text_id
         }
+
 
     def __len__(self):
         return self.len
@@ -178,7 +195,7 @@ print('test_data')
 print(len(test_data))
 
 model = HateSpeechClassifier(MODEL_NAME, 2)
-state_dict = torch.load("./cartographic_analysis/best_model.pth", map_location='cpu')
+state_dict = torch.load("./cartographic_analysis/best_model2.pth", map_location='cpu')
 model.load_state_dict(state_dict)
 model = model.to(device)
 
@@ -210,7 +227,7 @@ def get_pred(label_0, label_1):
         return 1
 
 
-train_values = torch.load("./cartographic_analysis/train_values.pth")
+train_values = torch.load("./cartographic_analysis/train_values2.pth")
 
 # Step 2: Print the loaded tensor
 print("Loaded Tensor:")
@@ -322,18 +339,21 @@ def build_cartography_df(train_values_df):
 # Build the cartography DataFrame
 cartography_df = build_cartography_df(train_values_df)
 
+print(train_values_df.head())
+
 # Display the first few rows of the resulting cartography DataFrame
+pd.set_option('display.max_columns', None)
+
 print(cartography_df.head())
 
+total_points = len(cartography_df)
+print(f"Total data points in DataFrame: {total_points}")
 
-sns.scatterplot(data=cartography_df, x="variability", y="confidence", hue='correctness', palette='flare')
-plt.xlim(-0.1, 0.5)  # Set limits based on your expectations
-plt.ylim(0.3, 1.0)   # Adjust as necessary
+
+
+sns.scatterplot(data=cartography_df, x="variability", y="confidence", hue='correctness', palette='flare', s=5)  # Adjust 's' to change marker size
+plt.xlim(0.0, 0.5)  # Set limits based on your expectations
+plt.ylim(0.0, 1.0)   # Adjust as necessary
 plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0, title='correctness')
-plt.savefig("./cartographic_analysis/conf_vs_var_color_correctness_final_no_duplicates.png", dpi=600, bbox_inches='tight')
+plt.savefig("./cartographic_analysis/conf_vs_var_color_correctness_final_no_duplicates_3.png", dpi=600, bbox_inches='tight')
 
-
-'''
-sns.scatterplot(data=cartography_df, x="variability", y="confidence", hue='label', palette='deep')
-plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
-'''

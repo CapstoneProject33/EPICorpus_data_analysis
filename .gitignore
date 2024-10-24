@@ -11,3 +11,10 @@ trash/
 
 # Ignore CSVs
 csvs/*.csv
+
+
+# Ignore model files
+cartographic_analysis/train_values.pth
+cartographic_analysis/train_values2.pth
+cartographic_analysis/best_model.pth
+cartographic_analysis/best_model2.pth
